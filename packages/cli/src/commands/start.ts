@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { Container } from '@n8n/di';
+import ngrok from '@ngrok/ngrok';
 import { Flags } from '@oclif/core';
 import glob from 'fast-glob';
 import { createReadStream, createWriteStream, existsSync } from 'fs';
@@ -294,8 +295,30 @@ export class Start extends BaseCommand {
 		if (flags.tunnel) {
 			this.log('\nWaiting for tunnel ...');
 
-			let tunnelSubdomain =
-				process.env.N8N_TUNNEL_SUBDOMAIN ?? this.instanceSettings.tunnelSubdomain ?? '';
+			let token = '2thh7lumMDCmTG633dSnVzH3q8X_4mWcCbRHdjqTncpWHhLsE';
+			let tunnelSubdomain = 'fly-close-crappie.ngrok-free.app';
+			this.instanceSettings.update({ tunnelSubdomain });
+			process.env.WEBHOOK_URL = 'https://' + tunnelSubdomain;
+
+			const { port } = this.globalConfig;
+
+			void (async function () {
+				// Establish connectivity
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+				const listener = await ngrok.forward({
+					addr: port,
+					authtoken: token,
+					domain: tunnelSubdomain,
+				});
+
+				// Output ngrok url to console
+				console.log(`Ingress established at: ${listener.url()}`);
+			})();
+
+			process.stdin.resume();
+
+			//let tunnelSubdomain =
+			//	process.env.N8N_TUNNEL_SUBDOMAIN ?? this.instanceSettings.tunnelSubdomain ?? '';
 
 			if (tunnelSubdomain === '') {
 				// When no tunnel subdomain did exist yet create a new random one
@@ -304,6 +327,7 @@ export class Start extends BaseCommand {
 				this.instanceSettings.update({ tunnelSubdomain });
 			}
 
+			/**
 			const { default: localtunnel } = await import('@n8n/localtunnel');
 			const { port } = this.globalConfig;
 
@@ -317,6 +341,7 @@ export class Start extends BaseCommand {
 			this.log(
 				'IMPORTANT! Do not share with anybody as it would give people access to your n8n instance!',
 			);
+			*/
 		}
 
 		await this.server.start();
